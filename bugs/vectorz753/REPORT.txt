@@ -1,0 +1,161 @@
+The most recent versions that are still able to reproduce the bug is
+11.0.20.0, 17.0.8.0. Since 11.0.20.1, 17.0.8.1, this bug is fixed.
+
+Fixed on Jun 23, 2023
+https://github.com/eclipse-openj9/openj9/pull/17525
+
+Confirmed on Apr 12, 2023
+
+Submitted on Apr 12, 2023
+https://github.com/eclipse-openj9/openj9/issues/17171
+
+===============
+BELOW IS REPORT
+===============
+
+# Title
+JDK 11/17/18 - JVM crash due to JIT compilation with NullPointerException from array access
+
+## System / OS / Java Runtime Information
+
+### Java version
+```
+$ java -version
+
+openjdk 17.0.6 2023-01-17
+IBM Semeru Runtime Open Edition 17.0.6.0 (build 17.0.6+10)
+Eclipse OpenJ9 VM 17.0.6.0 (build openj9-0.36.0, JRE 17 Linux amd64-64-Bit Compressed References 20230117_397 (JIT enabled, AOT enabled)
+OpenJ9   - e68fb241f
+OMR      - f491bbf6f
+JCL      - 927b34f84c8 based on jdk-17.0.6+10)
+```
+
+### Operating system details
+```
+$ cat /etc/*release
+
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=18.04
+DISTRIB_CODENAME=bionic
+DISTRIB_DESCRIPTION="Ubuntu 18.04.6 LTS"
+NAME="Ubuntu"
+VERSION="18.04.6 LTS (Bionic Beaver)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 18.04.6 LTS"
+VERSION_ID="18.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=bionic
+UBUNTU_CODENAME=bionic
+```
+
+```
+$ uname -a
+
+Linux seoul 5.4.0-99-generic #112~18.04.1-Ubuntu SMP Thu Feb 3 14:09:57 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+## Description
+
+JVM crashes with JIT enabled when running the following program. The bug affects 11.0.18.0, 17.0.6.0, and 18.0.2.1.
+
+## Steps to reproduce
+The following steps shows how to reproduce the bug on JDK 17.0.6.0 in a Ubuntu Linux environment.
+
+### Compile
+```
+$ javac C.java
+```
+
+### Execute
+```
+$ java C
+
+000000000001E400: Object neither in heap nor stack-allocated in thread main
+000000000001E400:       O-Slot=00007FC6DC3C58D0
+000000000001E400:       O-Slot value=0000000000000001
+000000000001E400:       PC=00007FC6A81E22C7
+000000000001E400:       framesWalked=1
+000000000001E400:       arg0EA=0000000000114A90
+000000000001E400:       walkSP=0000000000114A28
+000000000001E400:       literals=0000000000000010
+000000000001E400:       jitInfo=00007FC6A3C5BC78
+000000000001E400:       method=000000000019A078 (C.m()V) (JIT)
+000000000001E400:       stack=000000000010D468-0000000000114B80
+18:17:06.514 0x157800    j9mm.479    *   ** ASSERTION FAILED ** at /home/jenkins/workspace/build-scripts/jobs/jdk17u/jdk17u-linux-x64-openj9/workspace/build/src/openj9/runtime/gc_glue_java/ScavengerRootScanner.hpp:109: ((MM_StackSlotValidator(MM_StackSlotValidator::NOT_ON_HEAP, *slotPtr, stackLocation, walkState).validate(_env)))
+JVMDUMP039I Processing dump event "traceassert", detail "" at 2023/04/12 13:17:06 - please wait.
+JVMDUMP032I JVM requested Java dump using '/home/disk2/fuyao/projects/investigation/javacore.20230412.131706.5955.0001.txt' in response to an event
+JVMDUMP012E Error in Java dump: /home/disk2/fuyao/projects/investigation/javacore.20230412.131706.5955.0001.txt
+JVMDUMP032I JVM requested Snap dump using '/home/disk2/fuyao/projects/investigation/Snap.20230412.131706.5955.0002.trc' in response to an event
+JVMDUMP010I Snap dump written to /home/disk2/fuyao/projects/investigation/Snap.20230412.131706.5955.0002.trc
+JVMDUMP013I Processed dump event "traceassert", detail "".
+```
+
+```
+$ java -Xjit:optlevel=cold C 
+
+000000000001E400: Object neither in heap nor stack-allocated in thread main
+000000000001E400:       O-Slot=00007FE12FDFE8D0
+000000000001E400:       O-Slot value=0000000000000001
+000000000001E400:       PC=00007FE0FBB5101A
+000000000001E400:       framesWalked=5
+000000000001E400:       arg0EA=0000000000114AC0
+000000000001E400:       walkSP=0000000000114A48
+000000000001E400:       literals=0000000000000010
+000000000001E400:       jitInfo=00007FE0FB76F2B8
+000000000001E400:       method=000000000019A098 (C.main([Ljava/lang/String;)V) (JIT)
+000000000001E400:       stack=000000000010D468-0000000000114B80
+18:26:13.789 0x157800    j9mm.479    *   ** ASSERTION FAILED ** at /home/jenkins/workspace/build-scripts/jobs/jdk17u/jdk17u-linux-x64-openj9/workspace/build/src/openj9/runtime/gc_glue_java/ScavengerRootScanner.hpp:109: ((MM_StackSlotValidator(MM_StackSlotValidator::NOT_ON_HEAP, *slotPtr, stackLocation, walkState).validate(_env)))
+JVMDUMP039I Processing dump event "traceassert", detail "" at 2023/04/12 13:26:13 - please wait.
+JVMDUMP032I JVM requested Java dump using '/home/disk2/fuyao/projects/investigation/javacore.20230412.132613.3625.0001.txt' in response to an event
+JVMDUMP012E Error in Java dump: /home/disk2/fuyao/projects/investigation/javacore.20230412.132613.3625.0001.txt
+JVMDUMP032I JVM requested Snap dump using '/home/disk2/fuyao/projects/investigation/Snap.20230412.132613.3625.0002.trc' in response to an event
+JVMDUMP010I Snap dump written to /home/disk2/fuyao/projects/investigation/Snap.20230412.132613.3625.0002.trc
+JVMDUMP013I Processed dump event "traceassert", detail "".
+```
+
+```
+$ java -Xnojit C
+// program finishes successfully
+```
+
+Note that occasionally the error takes a few runs of the program to reproduce.
+
+### Source code for an executable test case
+```
+// C.java
+public class C {
+
+    private int idx = 1;
+    private double[] arr;
+
+    public void m() {
+        for (int i = 0; i < 1; ++i) {
+            double x = arr[idx]; // should throw NullPointerException
+        }
+    }
+
+    public static void main(String[] args) {
+        C c = new C();
+        for (int i = 0; i < 10_000; ++i) {
+            try {
+                c.m();
+            } catch (NullPointerException ignored) {
+            }
+        }
+    }
+}
+```
+
+### Workaround
+Disable JIT.
+```
+$ java -Xnojit C
+```
+
+### Additional Info
+javacore and snap logs attached.
+* [diagnostic-files.zip](https://github.com/eclipse-openj9/openj9/files/11215643/diagnostic-files.zip)

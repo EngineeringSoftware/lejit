@@ -1,0 +1,110 @@
+The most recent versions that are still able to reproduce the bug are
+8.0.382.0, 11.0.20.0, 17.0.8.0. Since 8.0.392.0, 11.0.21.0, 17.0.9.0,
+21.0.1.0 this bug has been fixed (all the versions have OpenJ9 0.41).
+(Although according to what I read about milestones in PR, this bug
+should had been fixed in OpenJ9 0.43)
+
+Fixed on Nov 13, 2023
+https://github.com/eclipse/omr/pull/7046
+
+Confirmed on Mar 30, 2023
+https://github.com/eclipse-openj9/openj9/issues/17066
+
+Submitted on Mar 30, 2023
+
+===============
+BELOW IS REPORT
+===============
+
+# Title
+JDK 8/11/17 crash when handling divided by zero from a long casted from int
+
+## System / OS / Java Runtime Information
+
+### Java version
+$ java -version
+openjdk version "17.0.6" 2023-01-17
+IBM Semeru Runtime Open Edition 17.0.6.0 (build 17.0.6+10)
+Eclipse OpenJ9 VM 17.0.6.0 (build openj9-0.36.0, JRE 17 Linux amd64-64-Bit Compressed References 20230117_397 (JIT enabled, AOT enabled)
+OpenJ9   - e68fb241f
+OMR      - f491bbf6f
+JCL      - 927b34f84c8 based on jdk-17.0.6+10)
+
+### Operating system details
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.5 LTS"
+NAME="Ubuntu"
+VERSION="20.04.5 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.5 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+
+$ uname -a
+Linux zzq-ThinkPad-T470 5.4.0-144-generic #161-Ubuntu SMP Fri Feb 3 14:49:04 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
+
+## Description
+
+JVM crashed when running the following program. The bug affects 8u362,
+11.0.18.0 and 17.0.6.0.
+
+## Steps to reproduce
+The following steps shows how to reproduce the bug on JDK 17.0.6.0 in a
+Ubuntu Linux environment.
+
+### Compile
+$ javac C.java
+
+### Execute
+$ java C
+JVMCDRT000E Unable to locate JIT stack map - aborting VM
+JVMCDRT001E Method: C.m(II)J (000000000017C888)
+JVMCDRT002E Failing PC: 00007FCF8FFE7742 (offset 0000000000000022), metaData = 00007FCF8E32CAF8
+05:39:06.077 0x150300j9codertvm(j9ji.110    *   ** ASSERTION FAILED ** at /home/jenkins/workspace/build-scripts/jobs/jdk17u/jdk17u-linux-x64-openj9/workspace/build/src/openj9/runtime/codert_vm/jswalk.c:538: ((0 ))
+JVMDUMP039I Processing dump event "traceassert", detail "" at 2023/03/30 00:39:06 - please wait.
+JVMDUMP032I JVM requested System dump using '/home/zzq/core.20230330.003906.1848239.0001.dmp' in response to an event
+JVMPORT030W /proc/sys/kernel/core_pattern setting "|/usr/share/apport/apport -p%p -s%s -c%c -d%d -P%P -u%u -g%g -- %E" specifies that the core dump is to be piped to an external program.  Attempting to rename either core or core.1848260.
+
+JVMDUMP012E Error in System dump: The core file created by child process with pid = 1848260 was not found. Expected to find core file with name "/home/zzq/core"
+JVMDUMP032I JVM requested Java dump using '/home/zzq/javacore.20230330.003906.1848239.0002.txt' in response to an event
+JVMDUMP012E Error in Java dump: /home/zzq/javacore.20230330.003906.1848239.0002.txt
+JVMDUMP032I JVM requested Snap dump using '/home/zzq/Snap.20230330.003906.1848239.0003.trc' in response to an event
+JVMDUMP010I Snap dump written to /home/zzq/Snap.20230330.003906.1848239.0003.trc
+JVMDUMP013I Processed dump event "traceassert", detail "".
+
+### Source code for an executable test case
+// C.java
+public class C {
+
+    public static long m(int x, int y) {
+        return (long) y / x;
+    }
+
+    public static void main(String[] args) {
+        int count = 0;
+        for (int i = 0; i < 10000; ++i) {
+            try {
+                m(0, 1);
+            } catch (ArithmeticException e) {
+                count += 1;
+            }
+        }
+        System.out.println(count); // expect 10000
+    }
+}
+
+### Workaround
+Disable JIT.
+$ java -Xnojit C
+
+### Diagnostic files
+See attached.

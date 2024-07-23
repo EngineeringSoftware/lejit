@@ -1,0 +1,6 @@
+Affected Java version: 18.0.2.1, 19.0.2
+Not affected Java version: 11.0.18, 17.0.6
+
+level 4 different from level 0 - 3.
+
+Bug type: diff

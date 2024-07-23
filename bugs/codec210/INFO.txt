@@ -1,0 +1,11 @@
+Affected Java version:
+    openjdk 21-ea 2023-09-19,
+    openjdk 20 2023-03-21, 
+    openjdk 19.0.2 2023-01-17,
+    java 17.0.6 2023-01-17 LTS,
+    java 11.0.18 2023-01-17 LTS
+
+Buggy levels: level 4
+level 0 - 3 are fine.
+
+Bug type: diff

@@ -1,0 +1,106 @@
+The most recent versions that are still able to reproduce the bug are
+8.0.392.0, 11.0.21.0, 17.0.9.0, 21.0.1.0. Since 8.0.402.0, 11.0.22.0,
+17.0.10.0, 21.0.2.0, this bug has been fixed.
+
+Fixed on Jan 19, 2024
+https://github.com/eclipse/omr/pull/7237
+https://github.com/eclipse/omr/pull/7238
+
+Marked as Duplicate of 17045:
+https://github.com/eclipse-openj9/openj9/issues/17045
+
+Confirmed on Jan 23, 2024
+
+Submitted on Jan 23, 2024
+https://github.com/eclipse-openj9/openj9/issues/18802
+
+===============
+BELOW IS REPORT
+===============
+
+# Title
+JDK 8/11/17/21 - Missing ArrayIndexOutOfBoundsException in a loop
+
+## System / OS / Java Runtime Information
+
+### Java version
+$ java -version
+openjdk version "17.0.9" 2023-10-17
+IBM Semeru Runtime Open Edition 17.0.9.0 (build 17.0.9+9)
+Eclipse OpenJ9 VM 17.0.9.0 (build openj9-0.41.0, JRE 17 Linux amd64-64-Bit Compressed References 20231017_614 (JIT enabled, AOT enabled)
+OpenJ9   - 461bf3c70
+OMR      - 5eee6ad9d
+JCL      - 3699725139c based on jdk-17.0.9+9)
+
+### Operating system details
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.3 LTS"
+NAME="Ubuntu"
+VERSION="20.04.3 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.3 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+
+$ uname -a
+Linux luzhou 5.4.0-86-generic #97-Ubuntu SMP Fri Sep 17 19:19:40 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+
+## Description
+
+Incorrect result is given when running the following program. The bug
+affects 8u392, 11.0.21, 17.0.9, 21.0.1 on default, hot, veryhot, and scorching levels.
+
+## Steps to reproduce
+The following steps shows how to reproduce the bug on JDK 17.0.9 in a
+Ubuntu Linux environment.
+
+### Compile
+$ javac C.java
+
+### Execute
+$ java C
+32967 // nondeterministic value
+
+$ java -Xjit:optlevel=scorching C 
+42864 // nondeterministic value
+
+$ java -Xnojit C
+100000 // expected value
+
+### Source code for an executable test case
+// C.java
+public class C {
+    static void m() {
+        int[] a = new int[1];
+        int j = 0;
+        for (int i = 1; j <= 1; ++i, ++j) {
+            a[i - 1] = 0;
+        }
+    }
+
+    public static void main(String[] args) {
+        int count = 0;
+        int N = 100_000;
+        for (int i = 0; i < N; ++i) {
+            try {
+                m();
+            } catch (ArrayIndexOutOfBoundsException e) {
+                count += 1;
+            }
+        }
+        System.out.println(count);
+    }
+}
+
+### Workaround
+Disable JIT.
+$ java -Xnojit C

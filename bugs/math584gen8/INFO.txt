@@ -1,0 +1,17 @@
+Affected Java version:
+  17.0.6
+  20
+  21-ea+17-1421
+
+Not affected Java version:
+  jdk8u361
+  11.0.18
+
+Buggy levels: 1-4
+level 0 is fine.
+
+Bug type: crash
+
+Can also be reproduced by using c1 from the beginning, i.e., `-Xbatch
+-Xcomp -XX:TieredStopAtLevel=1` and #iterations in main loop can be
+reduced to 1.

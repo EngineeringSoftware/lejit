@@ -1,0 +1,18 @@
+000000000001E400: Object neither in heap nor stack-allocated in thread main
+000000000001E400:	O-Slot=00007FD2844828D0
+000000000001E400:	O-Slot value=0000000000000003
+000000000001E400:	PC=00007FD251BCA70E
+000000000001E400:	framesWalked=5
+000000000001E400:	arg0EA=0000000000114A30
+000000000001E400:	walkSP=0000000000114968
+000000000001E400:	literals=0000000000000010
+000000000001E400:	jitInfo=00007FD227E74FB8
+000000000001E400:	method=000000000019AD88 (mikera/matrixx/decompose/impl/svd/SvdImplicitQrAlgorithm.printMatrix()V) (JIT)
+000000000001E400:	stack=000000000010D468-0000000000114B80
+17:59:45.710 0x166900    j9mm.479    *   ** ASSERTION FAILED ** at /home/jenkins/workspace/build-scripts/jobs/jdk17u/jdk17u-linux-x64-openj9/workspace/build/src/openj9/runtime/gc_glue_java/ScavengerRootScanner.hpp:109: ((MM_StackSlotValidator(MM_StackSlotValidator::NOT_ON_HEAP, *slotPtr, stackLocation, walkState).validate(_env)))
+JVMDUMP039I Processing dump event "traceassert", detail "" at 2023/04/09 12:59:45 - please wait.
+JVMDUMP032I JVM requested Java dump using '/home/fuyao/projects/jet-internal/experiments/results/outputs/vectorz/m753/output/Gen8/javacore.20230409.125945.483023.0001.txt' in response to an event
+JVMDUMP010I Java dump written to /home/fuyao/projects/jet-internal/experiments/results/outputs/vectorz/m753/output/Gen8/javacore.20230409.125945.483023.0001.txt
+JVMDUMP032I JVM requested Snap dump using '/home/fuyao/projects/jet-internal/experiments/results/outputs/vectorz/m753/output/Gen8/Snap.20230409.125945.483023.0002.trc' in response to an event
+JVMDUMP010I Snap dump written to /home/fuyao/projects/jet-internal/experiments/results/outputs/vectorz/m753/output/Gen8/Snap.20230409.125945.483023.0002.trc
+JVMDUMP013I Processed dump event "traceassert", detail "".

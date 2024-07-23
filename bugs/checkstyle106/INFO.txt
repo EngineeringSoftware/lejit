@@ -1,0 +1,7 @@
+Affected Java version: Oracle JDK 16.0.2, 17-ea+32-2679, 18-ea+7-288
+Not affected Java version: Oracle JDK 8u301, Oracle JDK 11.0.12
+
+Buggy levels: level 4
+level 0 - 3 are fine.
+
+Bug type: crash

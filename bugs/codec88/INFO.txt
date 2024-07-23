@@ -1,0 +1,9 @@
+Affected Java version:
+  OpenJ9 18.0.2.1
+  OpenJ9 17.0.6.0
+  OpenJ9 11.0.18.0
+  OpenJ9 8u362
+
+Buggy levels: hot, veryhot
+
+Bug type: diff

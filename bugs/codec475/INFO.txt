@@ -1,0 +1,5 @@
+Affected Java version:
+  GraalVM 20230410 openjdk 17.0.7-dev+4.1
+  GraalVM 20230410 openjdk 20-dev+34.1
+
+Bug type: diff

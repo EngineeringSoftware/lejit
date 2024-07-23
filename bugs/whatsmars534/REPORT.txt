@@ -1,0 +1,101 @@
+Fix: https://git.openjdk.org/jdk/pull/9141
+
+The most recent version that is still able to reproduce the bug is
+19.0.2. Since 20 this bug was fixed.
+
+The bug was labeled as a duplicate of JDK-8288064 because the bug had
+been fixed in the latest JDK 20 where the JDK-8288064 was fixed;
+however according to discussion, the bug itself seems not found by
+others before us.
+https://bugs.openjdk.org/browse/JDK-8288064
+
+Confirmed on Feb 2, 2023
+https://bugs.openjdk.org/browse/JDK-8301663
+
+Submitted on January 31, 2023
+Internal review ID: 9074748
+
+===============
+BELOW IS REPORT
+===============
+
+## Synopsis
+Missing IllegalArgumentException with c2
+
+## System / OS / Java Runtime Information 
+# Java version
+java version "19.0.2" 2023-01-17
+Java(TM) SE Runtime Environment (build 19.0.2+7-44)
+Java HotSpot(TM) 64-Bit Server VM (build 19.0.2+7-44, mixed mode, sharing)
+
+# Operating system details
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.3 LTS"
+NAME="Ubuntu"
+VERSION="20.04.3 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.3 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+
+$ uname -a
+Linux luzhou 5.4.0-86-generic #97-Ubuntu SMP Fri Sep 17 19:19:40 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+
+## Description
+Different outputs of the attached program are observed between
+different compilation tiers. This bug affects Oracle JDK 18.0.2.1 and
+Oracle JDK 19.0.2. It was not reproduced in Oracle JDK 11.0.18 and
+17.0.6.
+
+## Steps to Reproduce
+The following steps shows how to reproduce the bug on Java 19.0.2 in a
+Ubuntu Linux environment.
+
+# Compile
+$ javac C.java
+
+# Default or compilation up to level 4
+$ java --add-opens java.base/java.lang=ALL-UNNAMED C
+# Output (non-deterministic)
+8036
+
+# Compilation up to level 1
+$ java --add-opens java.base/java.lang=ALL-UNNAMED -XX:TieredStopAtLevel=1 C
+# Output
+100000
+
+# Interpreter or compilation up to level 0
+$ java --add-opens java.base/java.lang=ALL-UNNAMED -Xint C
+# Output (correct)
+100000
+
+## Source code for an executable test case
+# C.java
+import java.lang.reflect.Field;
+public class C {
+
+    public static void main(String[] args) throws Exception {
+        int count = 0;
+        for (int i = 0; i < 100_000; ++i) {
+            try {
+                Field f = Class.class.getDeclaredField("componentType");
+                f.setAccessible(true);
+                Object val = f.get(Runnable.class);
+            } catch (IllegalArgumentException e) {
+                count += 1;
+            }
+        }
+        System.out.println(count);
+    }
+}
+
+## Workaround

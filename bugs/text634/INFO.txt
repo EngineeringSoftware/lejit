@@ -1,0 +1,8 @@
+Affected Java version:
+  OpenJ9 21.0.1+12    
+  OpenJ9 17.0.9+9
+  OpenJ9 11.0.21+9
+
+Buggy levels: default, hot, veryhot, scorching
+
+Bug type: crash

@@ -1,0 +1,434 @@
+The most recent versions that are still able to reproduce the bug is
+8u372, 11.0.19.0, 17.0.7.0. Since 8u382, 11.0.20.0, 17.0.8.0, this bug
+is fixed.
+
+Fixed on May 5, 2023
+https://github.com/eclipse/omr/pull/6937
+
+Marked as Duplicate of 15363:
+https://github.com/eclipse-openj9/openj9/issues/15363
+
+Confirmed on Apr 17, 2023
+
+Submitted on Apr 17, 2023
+https://github.com/eclipse-openj9/openj9/issues/17212
+
+===============
+BELOW IS REPORT
+===============
+
+# Title
+JDK 8/11/17/18 - JVM crash due to JIT compilation with ArrayIndexOutOfBoundsException
+
+## System / OS / Java Runtime Information
+
+### Java version
+```
+$ java -version
+
+openjdk 17.0.6 2023-01-17
+IBM Semeru Runtime Open Edition 17.0.6.0 (build 17.0.6+10)
+Eclipse OpenJ9 VM 17.0.6.0 (build openj9-0.36.0, JRE 17 Linux amd64-64-Bit Compressed References 20230117_397 (JIT enabled, AOT enabled)
+OpenJ9   - e68fb241f
+OMR      - f491bbf6f
+JCL      - 927b34f84c8 based on jdk-17.0.6+10)
+```
+
+### Operating system details
+```
+$ cat /etc/*release
+
+openjdk 17.0.6 2023-01-17
+IBM Semeru Runtime Open Edition 17.0.6.0 (build 17.0.6+10)
+Eclipse OpenJ9 VM 17.0.6.0 (build openj9-0.36.0, JRE 17 Linux amd64-64-Bit Compressed References 20230117_397 (JIT enabled, AOT enabled)
+OpenJ9   - e68fb241f
+OMR      - f491bbf6f
+JCL      - 927b34f84c8 based on jdk-17.0.6+10)
+fuyao@seoul:~/projects/investigation$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=18.04
+DISTRIB_CODENAME=bionic
+DISTRIB_DESCRIPTION="Ubuntu 18.04.6 LTS"
+NAME="Ubuntu"
+VERSION="18.04.6 LTS (Bionic Beaver)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 18.04.6 LTS"
+VERSION_ID="18.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=bionic
+UBUNTU_CODENAME=bionic
+```
+
+```
+$ uname -a
+
+Linux seoul 5.4.0-99-generic #112~18.04.1-Ubuntu SMP Thu Feb 3 14:09:57 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+## Description
+
+JVM crashes with JIT enabled when running the following
+    program. The bug affects openj9jdk18.0.2+9,
+    openj9jdk17.0.6+10, openj9jdk11.0.18+10, and
+    openj9jdk8u362-b09. The bug is reproduced on the hot,
+    veryhot, scorching, and default (no option) optlevels.
+
+## Steps to reproduce
+The following steps shows how to reproduce the bug on JDK 17.0.6.0 in a Ubuntu Linux environment.
+
+### Compile
+```
+$ javac C.java
+```
+
+### Execute
+```
+$ java C
+
+#0: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x90ee85) [0x7f7a51f34e85]
+#1: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x91a890) [0x7f7a51f40890]
+#2: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x164949) [0x7f7a5178a949]
+#3: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x29d45) [0x7f7a54863d45]
+#4: /lib/x86_64-linux-gnu/libpthread.so.0(+0x12980) [0x7f7a5437c980]
+#5: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5663dc) [0x7f7a51b8c3dc]
+#6: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x99bec4) [0x7f7a51fc1ec4]
+#7: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9a0fe9) [0x7f7a51fc6fe9]
+#8: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9c2a8a) [0x7f7a51fe8a8a]
+#9: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x97ee12) [0x7f7a51fa4e12]
+#10: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x97f64c) [0x7f7a51fa564c]
+#11: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9bb981) [0x7f7a51fe1981]
+#12: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5621d9) [0x7f7a51b881d9]
+#13: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5637a6) [0x7f7a51b897a6]
+#14: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x55eb8f) [0x7f7a51b84b8f]
+#15: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x58a052) [0x7f7a51bb0052]
+#16: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x179fbb) [0x7f7a5179ffbb]
+#17: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x17af92) [0x7f7a517a0f92]
+#18: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x2a851) [0x7f7a54864851]
+#19: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178b30) [0x7f7a5179eb30]
+#20: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178e78) [0x7f7a5179ee78]
+#21: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x177da8) [0x7f7a5179dda8]
+#22: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178112) [0x7f7a5179e112]
+#23: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x1781c2) [0x7f7a5179e1c2]
+#24: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x2a851) [0x7f7a54864851]
+#25: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178587) [0x7f7a5179e587]
+#26: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9thr29.so(+0xb333) [0x7f7a5482c333]
+#27: /lib/x86_64-linux-gnu/libpthread.so.0(+0x76db) [0x7f7a543716db]
+#28: /lib/x86_64-linux-gnu/libc.so.6(clone+0x3f) [0x7f7a53e9661f]
+Unhandled exception
+Type=Segmentation error vmState=0x0005ff09
+J9Generic_Signal_Number=00000018 Signal_Number=0000000b Error_Value=00000000 Signal_Code=00000001
+Handler1=00007F7A531E3140 Handler2=00007F7A54863B20 InaccessibleAddress=0000000000000030
+RDI=00007F7A18EDCFD0 RSI=0000000000000000 RAX=00007F7A522AA320 RBX=0000000000000000
+RCX=0000000000000001 RDX=0000000000000000 R8=0000000000000000 R9=0000000000000002
+R10=0000000000000006 R11=0000000000000000 R12=0000000000000000 R13=FFFFFFFF638BB31C
+R14=000000000000022D R15=00007F7A18D9A9A0
+RIP=00007F7A51B8C3DC GS=0000 FS=0000 RSP=00007F7A2060C2E0
+EFlags=0000000000010202 CS=0033 RBP=00007F7A18EDCFD0 ERR=0000000000000004
+TRAPNO=000000000000000E OLDMASK=0000000000000000 CR2=0000000000000030
+xmm0 00007f7a18f42370 (f: 418653056.000000, d: 6.924942e-310)
+xmm1 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm2 00007f7a18ed89f0 (f: 418220544.000000, d: 6.924942e-310)
+xmm3 00007f7a18ed5780 (f: 418207616.000000, d: 6.924942e-310)
+xmm4 00007f7a18d9e450 (f: 416932928.000000, d: 6.924942e-310)
+xmm5 00007f7a18f3fbd0 (f: 418642880.000000, d: 6.924942e-310)
+xmm6 00007f7a18f41980 (f: 418650496.000000, d: 6.924942e-310)
+xmm7 00007f7a18f42a70 (f: 418654848.000000, d: 6.924942e-310)
+xmm8 00007f7a18edb420 (f: 418231328.000000, d: 6.924942e-310)
+xmm9 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm10 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm11 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm12 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm13 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm14 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm15 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+Module=/home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so
+Module_base_address=00007F7A51626000
+
+Method_being_compiled=C.main([Ljava/lang/String;)V
+Target=2_90_20230117_397 (Linux 5.4.0-99-generic)
+CPU=amd64 (12 logical CPUs) (0xfa1d43000 RAM)
+----------- Stack Backtrace -----------
+#0: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x90ee85) [0x7f7a51f34e85]
+#1: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x91a890) [0x7f7a51f40890]
+#2: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x164949) [0x7f7a5178a949]
+#3: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x29d45) [0x7f7a54863d45]
+#4: /lib/x86_64-linux-gnu/libpthread.so.0(+0x12980) [0x7f7a5437c980]
+#5: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5663dc) [0x7f7a51b8c3dc]
+#6: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x99bec4) [0x7f7a51fc1ec4]
+#7: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9a0fe9) [0x7f7a51fc6fe9]
+#8: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9c2a8a) [0x7f7a51fe8a8a]
+#9: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x97ee12) [0x7f7a51fa4e12]
+#10: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x97f64c) [0x7f7a51fa564c]
+#11: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9bb981) [0x7f7a51fe1981]
+#12: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5621d9) [0x7f7a51b881d9]
+#13: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5637a6) [0x7f7a51b897a6]
+#14: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x55eb8f) [0x7f7a51b84b8f]
+#15: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x58a052) [0x7f7a51bb0052]
+#16: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x179fbb) [0x7f7a5179ffbb]
+#17: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x17af92) [0x7f7a517a0f92]
+#18: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x2a851) [0x7f7a54864851]
+#19: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178b30) [0x7f7a5179eb30]
+#20: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178e78) [0x7f7a5179ee78]
+#21: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x177da8) [0x7f7a5179dda8]
+#22: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178112) [0x7f7a5179e112]
+#23: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x1781c2) [0x7f7a5179e1c2]
+#24: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x2a851) [0x7f7a54864851]
+#25: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178587) [0x7f7a5179e587]
+#26: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9thr29.so(+0xb333) [0x7f7a5482c333]
+#27: /lib/x86_64-linux-gnu/libpthread.so.0(+0x76db) [0x7f7a543716db]
+#28: /lib/x86_64-linux-gnu/libc.so.6(clone+0x3f) [0x7f7a53e9661f]
+Unhandled exception
+Type=Segmentation error vmState=0x0005ff09
+J9Generic_Signal_Number=00000018 Signal_Number=0000000b Error_Value=00000000 Signal_Code=00000001
+Handler1=00007F7A531E3140 Handler2=00007F7A54863B20 InaccessibleAddress=0000000000000030
+RDI=00007F7A19F44190 RSI=0000000000000000 RAX=00007F7A522AA320 RBX=0000000000000000
+RCX=0000000000000001 RDX=0000000000000000 R8=0000000000000000 R9=0000000000000002
+R10=0000000000000006 R11=0000000000000000 R12=0000000000000000 R13=FFFFFFFF638BB30A
+R14=000000000000022D R15=00007F7A19D9A830
+RIP=00007F7A51B8C3DC GS=0000 FS=0000 RSP=00007F7A2070D2E0
+EFlags=0000000000010202 CS=0033 RBP=00007F7A19F44190 ERR=0000000000000004
+TRAPNO=000000000000000E OLDMASK=0000000000000000 CR2=0000000000000030
+xmm0 00007f7a19f3a570 (f: 435398016.000000, d: 6.924943e-310)
+xmm1 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm2 00007f7a19f3fc30 (f: 435420224.000000, d: 6.924943e-310)
+xmm3 00007f7a19f3f930 (f: 435419456.000000, d: 6.924943e-310)
+xmm4 00007f7a19d9e2e0 (f: 433709792.000000, d: 6.924942e-310)
+xmm5 00007f7a19f3b010 (f: 435400704.000000, d: 6.924943e-310)
+xmm6 00007f7a19f3c800 (f: 435406848.000000, d: 6.924943e-310)
+xmm7 00007f7a19f3f730 (f: 435418944.000000, d: 6.924943e-310)
+xmm8 00007f7a19f41720 (f: 435427104.000000, d: 6.924943e-310)
+xmm9 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm10 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm11 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm12 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm13 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm14 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm15 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+Module=/home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so
+Module_base_address=00007F7A51626000
+
+Method_being_compiled=C.m()V
+Target=2_90_20230117_397 (Linux 5.4.0-99-generic)
+CPU=amd64 (12 logical CPUs) (0xfa1d43000 RAM)
+----------- Stack Backtrace -----------
+_ZN3OMR11Instruction11useRegisterEPN2TR8RegisterE+0xc (0x00007F7A51B8C3DC [libj9jit29.so+0x5663dc])
+_ZN2TR27AMD64RegImm64SymInstructionC1EPNS_11InstructionEN3OMR10InstOpCode8MnemonicEPNS_8RegisterEmPNS_15SymbolReferenceEPNS_13CodeGeneratorE+0x84 (0x00007F7A51FC1EC4 [libj9jit29.so+0x99bec4])
+_Z30generateRegImm64SymInstructionPN2TR11InstructionEN3OMR10InstOpCode8MnemonicEPNS_8RegisterEmPNS_15SymbolReferenceEPNS_13CodeGeneratorE+0x59 (0x00007F7A51FC6FE9 [libj9jit29.so+0x9a0fe9])
+_ZN3OMR3X865AMD6415MemoryReference22generateBinaryEncodingEPhPN2TR11InstructionEPNS4_13CodeGeneratorE+0x31a (0x00007F7A51FE8A8A [libj9jit29.so+0x9c2a8a])
+_ZN2TR20X86MemImmInstruction15generateOperandEPh+0x42 (0x00007F7A51FA4E12 [libj9jit29.so+0x97ee12])
+_ZN3OMR3X8611Instruction22generateBinaryEncodingEv+0x7c (0x00007F7A51FA564C [libj9jit29.so+0x97f64c])
+_ZN3OMR3X8613CodeGenerator16doBinaryEncodingEv+0x661 (0x00007F7A51FE1981 [libj9jit29.so+0x9bb981])
+_ZN3OMR12CodeGenPhase26performBinaryEncodingPhaseEPN2TR13CodeGeneratorEPNS1_12CodeGenPhaseE+0x89 (0x00007F7A51B881D9 [libj9jit29.so+0x5621d9])
+_ZN3OMR12CodeGenPhase10performAllEv+0xd6 (0x00007F7A51B897A6 [libj9jit29.so+0x5637a6])
+_ZN3OMR13CodeGenerator12generateCodeEv+0x5f (0x00007F7A51B84B8F [libj9jit29.so+0x55eb8f])
+_ZN3OMR11Compilation7compileEv+0xb32 (0x00007F7A51BB0052 [libj9jit29.so+0x58a052])
+_ZN2TR28CompilationInfoPerThreadBase7compileEP10J9VMThreadPNS_11CompilationEP17TR_ResolvedMethodR11TR_J9VMBaseP19TR_OptimizationPlanRKNS_16SegmentAllocatorE+0x49b (0x00007F7A5179FFBB [libj9jit29.so+0x179fbb])
+_ZN2TR28CompilationInfoPerThreadBase14wrappedCompileEP13J9PortLibraryPv+0x362 (0x00007F7A517A0F92 [libj9jit29.so+0x17af92])
+omrsig_protect+0x2b1 (0x00007F7A54864851 [libj9prt29.so+0x2a851])
+_ZN2TR28CompilationInfoPerThreadBase7compileEP10J9VMThreadP21TR_MethodToBeCompiledRN2J917J9SegmentProviderE+0x360 (0x00007F7A5179EB30 [libj9jit29.so+0x178b30])
+_ZN2TR24CompilationInfoPerThread12processEntryER21TR_MethodToBeCompiledRN2J917J9SegmentProviderE+0x128 (0x00007F7A5179EE78 [libj9jit29.so+0x178e78])
+_ZN2TR24CompilationInfoPerThread14processEntriesEv+0x368 (0x00007F7A5179DDA8 [libj9jit29.so+0x177da8])
+_ZN2TR24CompilationInfoPerThread3runEv+0x42 (0x00007F7A5179E112 [libj9jit29.so+0x178112])
+_Z30protectedCompilationThreadProcP13J9PortLibraryPN2TR24CompilationInfoPerThreadE+0x82 (0x00007F7A5179E1C2 [libj9jit29.so+0x1781c2])
+omrsig_protect+0x2b1 (0x00007F7A54864851 [libj9prt29.so+0x2a851])
+_Z21compilationThreadProcPv+0x177 (0x00007F7A5179E587 [libj9jit29.so+0x178587])
+thread_wrapper+0x163 (0x00007F7A5482C333 [libj9thr29.so+0xb333])
+start_thread+0xdb (0x00007F7A543716DB [libpthread.so.0+0x76db])
+clone+0x3f (0x00007F7A53E9661F [libc.so.6+0x12161f])
+---------------------------------------
+JVMDUMP039I Processing dump event "gpf", detail "" at 2023/04/17 15:34:33 - please wait.
+JVMDUMP032I JVM requested Java dump using '/home/disk2/fuyao/projects/investigation/javacore.20230417.153433.17162.0001.txt' in response to an event
+_ZN3OMR11Instruction11useRegisterEPN2TR8RegisterE+0xc (0x00007F7A51B8C3DC [libj9jit29.so+0x5663dc])
+_ZN2TR27AMD64RegImm64SymInstructionC1EPNS_11InstructionEN3OMR10InstOpCode8MnemonicEPNS_8RegisterEmPNS_15SymbolReferenceEPNS_13CodeGeneratorE+0x84 (0x00007F7A51FC1EC4 [libj9jit29.so+0x99bec4])
+_Z30generateRegImm64SymInstructionPN2TR11InstructionEN3OMR10InstOpCode8MnemonicEPNS_8RegisterEmPNS_15SymbolReferenceEPNS_13CodeGeneratorE+0x59 (0x00007F7A51FC6FE9 [libj9jit29.so+0x9a0fe9])
+_ZN3OMR3X865AMD6415MemoryReference22generateBinaryEncodingEPhPN2TR11InstructionEPNS4_13CodeGeneratorE+0x31a (0x00007F7A51FE8A8A [libj9jit29.so+0x9c2a8a])
+_ZN2TR20X86MemImmInstruction15generateOperandEPh+0x42 (0x00007F7A51FA4E12 [libj9jit29.so+0x97ee12])
+_ZN3OMR3X8611Instruction22generateBinaryEncodingEv+0x7c (0x00007F7A51FA564C [libj9jit29.so+0x97f64c])
+_ZN3OMR3X8613CodeGenerator16doBinaryEncodingEv+0x661 (0x00007F7A51FE1981 [libj9jit29.so+0x9bb981])
+_ZN3OMR12CodeGenPhase26performBinaryEncodingPhaseEPN2TR13CodeGeneratorEPNS1_12CodeGenPhaseE+0x89 (0x00007F7A51B881D9 [libj9jit29.so+0x5621d9])
+_ZN3OMR12CodeGenPhase10performAllEv+0xd6 (0x00007F7A51B897A6 [libj9jit29.so+0x5637a6])
+_ZN3OMR13CodeGenerator12generateCodeEv+0x5f (0x00007F7A51B84B8F [libj9jit29.so+0x55eb8f])
+_ZN3OMR11Compilation7compileEv+0xb32 (0x00007F7A51BB0052 [libj9jit29.so+0x58a052])
+_ZN2TR28CompilationInfoPerThreadBase7compileEP10J9VMThreadPNS_11CompilationEP17TR_ResolvedMethodR11TR_J9VMBaseP19TR_OptimizationPlanRKNS_16SegmentAllocatorE+0x49b (0x00007F7A5179FFBB [libj9jit29.so+0x179fbb])
+_ZN2TR28CompilationInfoPerThreadBase14wrappedCompileEP13J9PortLibraryPv+0x362 (0x00007F7A517A0F92 [libj9jit29.so+0x17af92])
+omrsig_protect+0x2b1 (0x00007F7A54864851 [libj9prt29.so+0x2a851])
+_ZN2TR28CompilationInfoPerThreadBase7compileEP10J9VMThreadP21TR_MethodToBeCompiledRN2J917J9SegmentProviderE+0x360 (0x00007F7A5179EB30 [libj9jit29.so+0x178b30])
+_ZN2TR24CompilationInfoPerThread12processEntryER21TR_MethodToBeCompiledRN2J917J9SegmentProviderE+0x128 (0x00007F7A5179EE78 [libj9jit29.so+0x178e78])
+_ZN2TR24CompilationInfoPerThread14processEntriesEv+0x368 (0x00007F7A5179DDA8 [libj9jit29.so+0x177da8])
+_ZN2TR24CompilationInfoPerThread3runEv+0x42 (0x00007F7A5179E112 [libj9jit29.so+0x178112])
+_Z30protectedCompilationThreadProcP13J9PortLibraryPN2TR24CompilationInfoPerThreadE+0x82 (0x00007F7A5179E1C2 [libj9jit29.so+0x1781c2])
+omrsig_protect+0x2b1 (0x00007F7A54864851 [libj9prt29.so+0x2a851])
+_Z21compilationThreadProcPv+0x177 (0x00007F7A5179E587 [libj9jit29.so+0x178587])
+thread_wrapper+0x163 (0x00007F7A5482C333 [libj9thr29.so+0xb333])
+start_thread+0xdb (0x00007F7A543716DB [libpthread.so.0+0x76db])
+clone+0x3f (0x00007F7A53E9661F [libc.so.6+0x12161f])
+---------------------------------------
+JVMDUMP039I Processing dump event "gpf", detail "" at 2023/04/17 15:34:43 - please wait.
+JVMDUMP032I JVM requested Java dump using '/home/disk2/fuyao/projects/investigation/javacore.20230417.153443.17162.0002.txt' in response to an event
+JVMDUMP010I Java dump written to /home/disk2/fuyao/projects/investigation/javacore.20230417.153443.17162.0002.txt
+JVMDUMP032I JVM requested Snap dump using '/home/disk2/fuyao/projects/investigation/Snap.20230417.153443.17162.0003.trc' in response to an event
+JVMDUMP010I Snap dump written to /home/disk2/fuyao/projects/investigation/Snap.20230417.153443.17162.0003.trc
+JVMDUMP032I JVM requested JIT dump using '/home/disk2/fuyao/projects/investigation/jitdump.20230417.153443.17162.0004.dmp' in response to an event
+JVMDUMP051I JIT dump occurred in 'JIT Compilation Thread-000' thread 0x0000000000022100
+JVMDUMP049I JIT dump notified all waiting threads of the current method to be compiled
+JVMDUMP054I JIT dump is tracing the IL of the method on the crashed compilation thread
+JVMDUMP052I JIT dump recursive crash occurred on diagnostic thread
+JVMDUMP048I JIT dump method being compiled is an ordinary method
+JVMDUMP053I JIT dump is recompiling C.m()V
+JVMDUMP052I JIT dump recursive crash occurred on diagnostic thread
+JVMDUMP010I JIT dump written to /home/disk2/fuyao/projects/investigation/jitdump.20230417.153443.17162.0004.dmp
+JVMDUMP013I Processed dump event "gpf", detail "".
+```
+
+```
+$ java -Xjit:optlevel=hot C 
+
+#0: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x90ee85) [0x7fd81cc15e85]
+#1: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x91a890) [0x7fd81cc21890]
+#2: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x164949) [0x7fd81c46b949]
+#3: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x29d45) [0x7fd81f544d45]
+#4: /lib/x86_64-linux-gnu/libpthread.so.0(+0x12980) [0x7fd81f05d980]
+#5: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5663dc) [0x7fd81c86d3dc]
+#6: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x99bec4) [0x7fd81cca2ec4]
+#7: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9a0fe9) [0x7fd81cca7fe9]
+#8: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9c2a8a) [0x7fd81ccc9a8a]
+#9: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x97ee12) [0x7fd81cc85e12]
+#10: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x97f64c) [0x7fd81cc8664c]
+#11: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x9bb981) [0x7fd81ccc2981]
+#12: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5621d9) [0x7fd81c8691d9]
+#13: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x5637a6) [0x7fd81c86a7a6]
+#14: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x55eb8f) [0x7fd81c865b8f]
+#15: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x58a052) [0x7fd81c891052]
+#16: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x179fbb) [0x7fd81c480fbb]
+#17: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x17af92) [0x7fd81c481f92]
+#18: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x2a851) [0x7fd81f545851]
+#19: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178b30) [0x7fd81c47fb30]
+#20: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178e78) [0x7fd81c47fe78]
+#21: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x177da8) [0x7fd81c47eda8]
+#22: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178112) [0x7fd81c47f112]
+#23: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x1781c2) [0x7fd81c47f1c2]
+#24: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9prt29.so(+0x2a851) [0x7fd81f545851]
+#25: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so(+0x178587) [0x7fd81c47f587]
+#26: /home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9thr29.so(+0xb333) [0x7fd81f50d333]
+#27: /lib/x86_64-linux-gnu/libpthread.so.0(+0x76db) [0x7fd81f0526db]
+#28: /lib/x86_64-linux-gnu/libc.so.6(clone+0x3f) [0x7fd81eb7761f]
+Unhandled exception
+Type=Segmentation error vmState=0x0005ff09
+J9Generic_Signal_Number=00000018 Signal_Number=0000000b Error_Value=00000000 Signal_Code=00000001
+Handler1=00007FD81DEC4140 Handler2=00007FD81F544B20 InaccessibleAddress=0000000000000030
+RDI=00007FD77F147FD0 RSI=0000000000000000 RAX=00007FD81CF8B320 RBX=0000000000000000
+RCX=0000000000000001 RDX=0000000000000000 R8=0000000000000000 R9=0000000000000002
+R10=0000000000000006 R11=0000000000000000 R12=0000000000000000 R13=FFFFFFFF638BB31C
+R14=000000000000022D R15=00007FD77F0059A0
+RIP=00007FD81C86D3DC GS=0000 FS=0000 RSP=00007FD7EA3722E0
+EFlags=0000000000010202 CS=0033 RBP=00007FD77F147FD0 ERR=0000000000000004
+TRAPNO=000000000000000E OLDMASK=0000000000000000 CR2=0000000000000030
+xmm0 00007fd77f1ad370 (f: 2132464512.000000, d: 6.944761e-310)
+xmm1 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm2 00007fd77f1439f0 (f: 2132032000.000000, d: 6.944761e-310)
+xmm3 00007fd77f140780 (f: 2132019072.000000, d: 6.944761e-310)
+xmm4 00007fd77f009450 (f: 2130744448.000000, d: 6.944761e-310)
+xmm5 00007fd77f1aabd0 (f: 2132454400.000000, d: 6.944761e-310)
+xmm6 00007fd77f1ac980 (f: 2132461952.000000, d: 6.944761e-310)
+xmm7 00007fd77f1ada70 (f: 2132466304.000000, d: 6.944761e-310)
+xmm8 00007fd77f146420 (f: 2132042752.000000, d: 6.944761e-310)
+xmm9 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm10 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm11 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm12 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm13 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm14 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+xmm15 0000000000000000 (f: 0.000000, d: 0.000000e+00)
+Module=/home/disk2/fuyao/projects/investigation/jdks/openj9jdk17.0.6+10/lib/default/libj9jit29.so
+Module_base_address=00007FD81C307000
+
+Method_being_compiled=C.main([Ljava/lang/String;)V
+Target=2_90_20230117_397 (Linux 5.4.0-99-generic)
+CPU=amd64 (12 logical CPUs) (0xfa1d43000 RAM)
+----------- Stack Backtrace -----------
+_ZN3OMR11Instruction11useRegisterEPN2TR8RegisterE+0xc (0x00007FD81C86D3DC [libj9jit29.so+0x5663dc])
+_ZN2TR27AMD64RegImm64SymInstructionC1EPNS_11InstructionEN3OMR10InstOpCode8MnemonicEPNS_8RegisterEmPNS_15SymbolReferenceEPNS_13CodeGeneratorE+0x84 (0x00007FD81CCA2EC4 [libj9jit29.so+0x99bec4])
+_Z30generateRegImm64SymInstructionPN2TR11InstructionEN3OMR10InstOpCode8MnemonicEPNS_8RegisterEmPNS_15SymbolReferenceEPNS_13CodeGeneratorE+0x59 (0x00007FD81CCA7FE9 [libj9jit29.so+0x9a0fe9])
+_ZN3OMR3X865AMD6415MemoryReference22generateBinaryEncodingEPhPN2TR11InstructionEPNS4_13CodeGeneratorE+0x31a (0x00007FD81CCC9A8A [libj9jit29.so+0x9c2a8a])
+_ZN2TR20X86MemImmInstruction15generateOperandEPh+0x42 (0x00007FD81CC85E12 [libj9jit29.so+0x97ee12])
+_ZN3OMR3X8611Instruction22generateBinaryEncodingEv+0x7c (0x00007FD81CC8664C [libj9jit29.so+0x97f64c])
+_ZN3OMR3X8613CodeGenerator16doBinaryEncodingEv+0x661 (0x00007FD81CCC2981 [libj9jit29.so+0x9bb981])
+_ZN3OMR12CodeGenPhase26performBinaryEncodingPhaseEPN2TR13CodeGeneratorEPNS1_12CodeGenPhaseE+0x89 (0x00007FD81C8691D9 [libj9jit29.so+0x5621d9])
+_ZN3OMR12CodeGenPhase10performAllEv+0xd6 (0x00007FD81C86A7A6 [libj9jit29.so+0x5637a6])
+_ZN3OMR13CodeGenerator12generateCodeEv+0x5f (0x00007FD81C865B8F [libj9jit29.so+0x55eb8f])
+_ZN3OMR11Compilation7compileEv+0xb32 (0x00007FD81C891052 [libj9jit29.so+0x58a052])
+_ZN2TR28CompilationInfoPerThreadBase7compileEP10J9VMThreadPNS_11CompilationEP17TR_ResolvedMethodR11TR_J9VMBaseP19TR_OptimizationPlanRKNS_16SegmentAllocatorE+0x49b (0x00007FD81C480FBB [libj9jit29.so+0x179fbb])
+_ZN2TR28CompilationInfoPerThreadBase14wrappedCompileEP13J9PortLibraryPv+0x362 (0x00007FD81C481F92 [libj9jit29.so+0x17af92])
+omrsig_protect+0x2b1 (0x00007FD81F545851 [libj9prt29.so+0x2a851])
+_ZN2TR28CompilationInfoPerThreadBase7compileEP10J9VMThreadP21TR_MethodToBeCompiledRN2J917J9SegmentProviderE+0x360 (0x00007FD81C47FB30 [libj9jit29.so+0x178b30])
+_ZN2TR24CompilationInfoPerThread12processEntryER21TR_MethodToBeCompiledRN2J917J9SegmentProviderE+0x128 (0x00007FD81C47FE78 [libj9jit29.so+0x178e78])
+_ZN2TR24CompilationInfoPerThread14processEntriesEv+0x368 (0x00007FD81C47EDA8 [libj9jit29.so+0x177da8])
+_ZN2TR24CompilationInfoPerThread3runEv+0x42 (0x00007FD81C47F112 [libj9jit29.so+0x178112])
+_Z30protectedCompilationThreadProcP13J9PortLibraryPN2TR24CompilationInfoPerThreadE+0x82 (0x00007FD81C47F1C2 [libj9jit29.so+0x1781c2])
+omrsig_protect+0x2b1 (0x00007FD81F545851 [libj9prt29.so+0x2a851])
+_Z21compilationThreadProcPv+0x177 (0x00007FD81C47F587 [libj9jit29.so+0x178587])
+thread_wrapper+0x163 (0x00007FD81F50D333 [libj9thr29.so+0xb333])
+start_thread+0xdb (0x00007FD81F0526DB [libpthread.so.0+0x76db])
+clone+0x3f (0x00007FD81EB7761F [libc.so.6+0x12161f])
+---------------------------------------
+JVMDUMP039I Processing dump event "gpf", detail "" at 2023/04/17 15:35:17 - please wait.
+JVMDUMP032I JVM requested Java dump using '/home/disk2/fuyao/projects/investigation/javacore.20230417.153517.22153.0001.txt' in response to an event
+JVMDUMP010I Java dump written to /home/disk2/fuyao/projects/investigation/javacore.20230417.153517.22153.0001.txt
+JVMDUMP032I JVM requested Snap dump using '/home/disk2/fuyao/projects/investigation/Snap.20230417.153517.22153.0002.trc' in response to an event
+JVMDUMP010I Snap dump written to /home/disk2/fuyao/projects/investigation/Snap.20230417.153517.22153.0002.trc
+JVMDUMP032I JVM requested JIT dump using '/home/disk2/fuyao/projects/investigation/jitdump.20230417.153517.22153.0003.dmp' in response to an event
+JVMDUMP051I JIT dump occurred in 'JIT Compilation Thread-001' thread 0x0000000000025D00
+JVMDUMP049I JIT dump notified all waiting threads of the current method to be compiled
+JVMDUMP054I JIT dump is tracing the IL of the method on the crashed compilation thread
+JVMDUMP052I JIT dump recursive crash occurred on diagnostic thread
+JVMDUMP010I JIT dump written to /home/disk2/fuyao/projects/investigation/jitdump.20230417.153517.22153.0003.dmp
+JVMDUMP013I Processed dump event "gpf", detail "".
+```
+
+```
+$ java -Xnojit C
+// program finishes successfully
+```
+
+Note that occasionally the error takes a few runs of the program to reproduce.
+
+### Source code for an executable test case
+```
+// C.java
+public class C {
+
+    static int i;
+
+    public static void m() {
+        char[] arr = new char[2];
+        while (arr[i - 1312433786] != 0) {
+            i--;
+        }
+        return;
+    }
+
+    public static void main(String[] args) {
+        for (int i = 0; i < 100_000; ++i) {
+            try {
+                C.m();
+            } catch (ArrayIndexOutOfBoundsException ignored) {
+            }
+        }
+    }
+}
+```
+
+### Workaround
+Disable JIT.
+```
+$ java -Xnojit C
+```
+
+### Additional Info
+javacore and snap logs attached.
+* [default.zip]()
+* [hot.zip]()

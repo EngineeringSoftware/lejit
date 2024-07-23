@@ -1,0 +1,103 @@
+Confirmed on March 10, 2023
+https://bugs.openjdk.org/browse/JDK-8303946
+https://bugs.java.com/bugdatabase/view_bug?bug_id=JDK-8303946
+
+# ORIGINAL REPORT
+Submitted on February 28, 2023
+Internal review ID: 9074863
+
+===============
+BELOW IS REPORT
+===============
+
+## Synopsis
+Incorrect StackOverflowError Thrown for c2 Instead of PatternSyntaxException
+
+## System / OS / Java Runtime Information 
+# Java version
+openjdk 19.0.2 2023-01-17
+OpenJDK Runtime Environment (build 19.0.2+7-44)
+OpenJDK 64-Bit Server VM (build 19.0.2+7-44, mixed mode, sharing)
+
+# Operating system details
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=18.04
+DISTRIB_CODENAME=bionic
+DISTRIB_DESCRIPTION="Ubuntu 18.04.5 LTS"
+NAME="Ubuntu"
+VERSION="18.04.5 LTS (Bionic Beaver)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 18.04.5 LTS"
+VERSION_ID="18.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=bionic
+UBUNTU_CODENAME=bionic
+
+$ uname -a
+Linux seoul 5.4.0-99-generic #112~18.04.1-Ubuntu SMP Thu Feb 3 14:09:57 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+
+## Description
+Different outputs of the attached program are observed between different compilation tiers. This bug
+affects openjdk 21-ea 2023-09-19, openjdk 20 2023-03-21, openjdk 19.0.2, java 17.0.6, and java 11.0.18.
+
+## Steps to Reproduce
+The following steps shows how to reproduce the bug on Java 19.0.2 in a Ubuntu Linux environment.
+
+# Compile
+$ javac C.java
+
+# Default or compilation up to level 4, with stack size 1024KB
+$ java -Xss1024K C 
+# Output (incorrect)
+java.lang.StackOverflowError
+
+# Compilation up to level 1
+$ java -XX:TieredStopAtLevel=1 C
+# Output (correct)
+java.util.regex.PatternSyntaxException: Stack overflow during pattern compilation near index 1
+\s+
+ ^
+
+# Interpreter or compilation up to level 0
+$ java -Xint C
+# Output (correct)
+java.util.regex.PatternSyntaxException: Stack overflow during pattern compilation near index 1
+\s+
+ ^
+
+## Source code for an executable test case
+# C.java
+import java.util.ArrayList;
+import java.util.List;
+
+public class C {
+    public static void encode(String str) {
+        String[] res = str.split("\\s+");
+
+        List<String> words = new ArrayList<String>(); 
+        for (int i = 0; i < 1000; i++) {
+            words.add("take up some space");
+        }
+
+        for (String word : words) {
+            encode(word);
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            encode("any_string");
+        } catch (Throwable e) {
+            System.out.println(e);
+        }
+    }
+}
+
+## Workaround
+Interpreter or compilation for Level 0, 1, 2, 3 are fine.
+$ java -XX:TieredStopAtLevel=3 C

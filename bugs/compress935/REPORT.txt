@@ -1,0 +1,147 @@
+Developers said the bug was fixed since 8u382, 11.0.20, 17.0.8.0, but
+I am not sure since this bug was not reproducible easily.
+
+Fixed on May 25, 2023 (the comments on GitHub issues show the
+developers themselves are not 100% sure it has been fixed. we will
+need to somehow validate although this bug could not be that easy to
+reproduce)
+https://github.com/eclipse-openj9/openj9/pull/17260
+
+Packaged and uploaded
+~/.cache/javasharedresources/C290M17F1A64P_sharedcc_zzq_G43L00 from
+seoul to GitHub to help developers locating the issue. See
+sharedcc.zip.
+
+Confirmed on Apr 24, 2023
+
+Submitted on Apr 23, 2023
+https://github.com/eclipse-openj9/openj9/issues/17250
+
+===============
+BELOW IS REPORT
+===============
+
+# Title
+JDK 17/18 - Exception thrown from JIT compilation due to SHA-1 MessageDigest not available
+
+## System / OS / Java Runtime Information
+
+### Java version
+```
+$ java -version
+
+openjdk 17.0.6 2023-01-17
+IBM Semeru Runtime Open Edition 17.0.6.0 (build 17.0.6+10)
+Eclipse OpenJ9 VM 17.0.6.0 (build openj9-0.36.0, JRE 17 Linux amd64-64-Bit Compressed References 20230117_397 (JIT enabled, AOT enabled)
+OpenJ9   - e68fb241f
+OMR      - f491bbf6f
+JCL      - 927b34f84c8 based on jdk-17.0.6+10)
+```
+
+### Operating system details
+```
+$ cat /etc/*release
+
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.3 LTS"
+NAME="Ubuntu"
+VERSION="20.04.3 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.3 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+```
+
+```
+$ uname -a
+
+Linux luzhou 5.4.0-86-generic #97-Ubuntu SMP Fri Sep 17 19:19:40 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+## Description
+
+A java.security.NoSuchAlgorithmException is thrown when
+running the following program. The bug affects 17.0.6.0,
+18.0.2.1 using the cold and warm optlevels.
+
+## Steps to reproduce
+
+The following steps shows how to reproduce the bug on JDK
+17.0.6.0 in a Ubuntu Linux environment.
+
+### Compile
+```
+$ javac C.java
+```
+
+### Execute
+```
+$ java -Xjit:optlevel=cold C
+
+Exception in thread "main" java.security.NoSuchAlgorithmException: SHA-1 MessageDigest not available
+        at java.base/sun.security.jca.GetInstance.getInstance(GetInstance.java:159)
+        at java.base/java.security.MessageDigest.getInstance(MessageDigest.java:185)
+        at C.main(C.java:5)
+```
+
+```
+$ java -Xjit:optlevel=warm C
+
+Exception in thread "main" java.security.NoSuchAlgorithmException: SHA-1 MessageDigest not available
+        at java.base/sun.security.jca.GetInstance.getInstance(GetInstance.java:159)
+        at java.base/java.security.MessageDigest.getInstance(MessageDigest.java:185)
+        at C.main(C.java:5)
+```
+
+```
+$ java -Xnojit C
+
+Exception in thread "main" java.security.NoSuchAlgorithmException: SHA-1 MessageDigest not available
+        at java.base/sun.security.jca.GetInstance.getInstance(GetInstance.java:159)
+        at java.base/java.security.MessageDigest.getInstance(MessageDigest.java:185)
+        at C.main(C.java:5)
+
+// Note: Output is non-deterministic with -Xnojit. The Exception is
+// sometimes thrown, while other times the program executes successfully.
+```
+
+```
+$ java C
+
+// executes successfully.
+```
+
+### Source code for an executable test case
+```
+// C.java
+
+import java.security.MessageDigest;
+
+public class C {
+    public static void main(String[] args) throws Exception {
+        MessageDigest.getInstance("SHA-1");
+    }
+}
+
+```
+
+### Workaround
+Run with default (no options).
+```
+$ java C
+```
+
+### Notes
+MessageDigest.java: [https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/MessageDigest.html](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/MessageDigest.html)
+
+> Every implementation of the Java platform is required to support the following standard MessageDigest algorithms:
+> - SHA-1
+> - SHA-256

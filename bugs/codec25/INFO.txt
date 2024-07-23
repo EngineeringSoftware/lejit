@@ -1,0 +1,11 @@
+Affected Java version: java 11.0.17 2022-10-18, java 17 2021-09-14 LTS, Oracle JDK 18.0.2.1, Oracle JDK 19.0.1, openjdk 20-ea 2023-03-21
+Not affected Java version: java version "1.8.0_351"
+
+Buggy levels: level 4
+level 0 - 3 are fine.
+
+Bug type: diff
+
+
+We can reduce the number of iterations to '1' and reproduce the issue with C2.
+java -Xbatch -Xcomp -XX:-TieredCompilation C

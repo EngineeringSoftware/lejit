@@ -1,0 +1,109 @@
+Fixed on Jul 18, 2023 (This is the date of the new version of jdk
+release with the bug fixed. However, there should be an earlier date
+in internal jbs page which we do not have access)
+
+CVE Record: https://www.cve.org/CVERecord?id=CVE-2023-22044
+
+Oracle's critical patch update:
+https://www.oracle.com/security-alerts/cpujul2023.html
+
+The most recent versions that are still able to reproduce the bug is
+17.0.7, 20.0.1. Since 17.0.8, 20.0.2, this bug is
+fixed.
+
+Confirmed on Mar 16, 2023
+https://bugs.openjdk.java.net/browse/JDK-8304336 (non-public)
+https://bugs.java.com/bugdatabase/view_bug?bug_id=JDK-8304336
+
+Submitted on Mar 15, 2023
+Internal review ID: 9074941
+
+===============
+BELOW IS REPORT
+===============
+
+## Synopsis
+ArrayIndexOutOfBoundsException not thrown from loop with C1
+
+## System / OS / Java Runtime Information 
+# Java version
+java version "19.0.2" 2023-01-17
+Java(TM) SE Runtime Environment (build 19.0.2+7-44)
+Java HotSpot(TM) 64-Bit Server VM (build 19.0.2+7-44, mixed mode, sharing)
+
+# Operating system details
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.5 LTS"
+NAME="Ubuntu"
+VERSION="20.04.5 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.5 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+
+$ uname -a
+Linux zzq-ThinkPad-T470 5.4.0-144-generic #161-Ubuntu SMP Fri Feb 3 14:49:04 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
+
+## Description
+Different outputs of the attached program are observed between
+different compilation tiers. This bug affects 17.0.6, 19.0.2,
+20+36-2344, 21-ea+13-1060.
+
+## Steps to Reproduce
+The following steps shows how to reproduce the bug on Java 19.0.2 in a
+Ubuntu Linux environment.
+
+# Compile
+$ javac C.java
+
+# Default or compilation up to level 4
+$ java C 
+# Output (correct)
+1000
+
+# Compilation up to level 1
+$ java -XX:TieredStopAtLevel=1 C
+# Output (incorrect and non-deterministic)
+269
+
+# Interpreter or compilation up to level 0
+$ java -Xint C
+# Output (correct)
+1000
+
+## Source code for an executable test case
+# C.java
+public class C {
+
+    static void m(int n) {
+        int[] a = new int[n];
+        for (int i = 0; i < 1; i++) {
+            int x = a[i % -1]; // ArrayIndexOutOfBoundsException
+        }
+    }
+
+    public static void main(String[] args) {
+        int count = 0;
+        for (int i = 0; i < 1000; ++i) {
+            try {
+                m(0);
+            } catch (ArrayIndexOutOfBoundsException e) {
+                count += 1;
+            }
+        }
+        System.out.println(count); // expect 1000
+    }
+}
+
+## Workaround
+Interpreter or compilation for Level 2, 3, 4 are fine.
+$ java C

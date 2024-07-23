@@ -1,0 +1,8 @@
+Affected Java versions:
+  OpenJ9 18.0.2.1 - cold, warm, hot, veryhot, scorching
+  OpenJ9 17.0.6.0 - cold, warm
+
+Buggy levels:
+  cold, warm (sometimes hot/veryhot/scorching for jdk18)
+
+Bug type: diff

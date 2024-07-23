@@ -1,0 +1,9 @@
+Affected Java version:
+  openj9jdk18.0.2+9
+  openj9jdk17.0.6+10
+  openj9jdk11.0.18+10
+  openj9jdk8u362-b09
+
+Buggy levels: default, hot, veryhot, scorching
+
+Bug type: crash

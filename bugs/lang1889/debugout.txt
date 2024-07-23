@@ -1,0 +1,5 @@
+oraclejdk20 -XX:TieredStopAtLevel=4
+openj9jdk17 (no options)
+openj9jdk17 -Xjit:optlevel=hot
+100000
+gold: openj9jdk17 -Xnojit

@@ -1,0 +1,102 @@
+However, the bug is still NOT fixed on latest jdk 8 (8u321 on Jan 18,
+2022). I left a comment, hoping they will backport the fix in the
+release of 8u331. No they did not fix even in 8u341. They should be
+able to fix it in 8u351 because I saw a PR for this, if it can be
+merged in time. No they did not make it in 8u351 (Nov 21, 2022). jbs
+shows it was fixed in 8u362. Not fixed in 8u371 (May 13, 2023).
+Not fixed in 8u391 (Dec 22, 2023).
+
+Comment link: https://bugreport.java.com/bugreport/bug_info?bug_id=F55B831BAB7D653DACF6640D9BAA0080
+(found from bug confirmation email, ".do" removed)
+
+Fix: https://github.com/openjdk/jdk/pull/5652
+
+The most recent versions that are still able to reproduce the bug is
+11.0.13, 17.0.1. Since 17.0.2, this bug is fixed.
+
+Confirmed on Jul 29, 2021
+https://bugs.openjdk.java.net/browse/JDK-8271459
+https://bugs.java.com/bugdatabase/view_bug?bug_id=JDK-8271459
+
+Submitted on Jul 26, 2021
+Internal review ID: 9071024
+
+===============
+BELOW IS REPORT
+===============
+
+Missing NegativeArraySizeException with c2
+
+Different outputs of the attached program are observed between
+different compilation tiers. This bug affects Oracle 1.8.0_301,
+11.0.12, 16.0.2 and early access build 17-ea+32-2679 and 18-ea+7-288.
+
+The following steps shows how to reproduce the bug on Java 16.0.2 in a
+Ubuntu Linux environment.
+
+# Compile
+$ javac C.java
+
+# Default or compilation up to level 4
+$ java C
+# Output (incorrect and non-deterministic)
+5597
+
+# Compilation up to level 1
+$ java -XX:TieredStopAtLevel=1 C
+# Output (correct)
+10000
+
+# Interpreter or compilation up to level 0
+$ java -Xint C
+# Output (correct)
+10000
+
+# Java version
+java version "16.0.2" 2021-07-20
+Java(TM) SE Runtime Environment (build 16.0.2+7-67)
+Java HotSpot(TM) 64-Bit Server VM (build 16.0.2+7-67, mixed mode, sharing)
+
+# Operating system details
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS"
+NAME="Ubuntu"
+VERSION="20.04.2 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.2 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+
+$ uname -a
+Linux zzq-ThinkPad-T470 5.4.0-77-generic #86-Ubuntu SMP Thu Jun 17 02:35:03 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+
+# C.java
+(Attached.)
+public class C {
+
+    static String m() {
+        StringBuilder sb = new StringBuilder(-1);
+        return sb.toString();
+    }
+
+    public static void main(String[] args) {
+        int sum = 0;
+        for (int i = 0; i < 10_000; ++i) {
+            try {
+                m();
+            } catch (Throwable e) {
+                sum += 1;
+            }
+        }
+        System.out.println(sum); // should be 10_000
+    }
+}

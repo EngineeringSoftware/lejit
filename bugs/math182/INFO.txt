@@ -1,0 +1,10 @@
+Affected Java version: Oracle JDK 8u301, Oracle JDK 11.0.12, Oracle JDK 16.0.2, 17-ea+31-2664, 18-ea+6-237
+
+Buggy levels: level 1, level 2, level 3, level 4
+level 0 (pure interpreter) is fine.
+
+Bug type: crash
+
+Can also be reproduced by using c1 from the beginning, i.e., `-Xbatch
+-Xcomp -XX:TieredStopAtLevel=1` and #iterations in main loop can be
+reduced to 1.

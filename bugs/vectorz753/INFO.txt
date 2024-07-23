@@ -1,0 +1,8 @@
+Affected Java version:
+  OpenJ9 18.0.2.1
+  OpenJ9 17.0.6.0
+  OpenJ9 11.0.18.0
+
+Buggy levels: default, cold
+
+Bug type: crash

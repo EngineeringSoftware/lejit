@@ -1,0 +1,11 @@
+Affected Java version:
+  17.0.10
+  18.0.2.1
+  19.0.2
+  20
+  21.0.2
+
+Buggy levels: 4
+level 0-1 is fine.
+
+Bug type: crash

@@ -1,0 +1,18 @@
+Affected Java version:
+  17.0.6
+  19.0.2
+  20+36-2344
+  21-ea+13-1060
+
+Not affected Java version:
+  jdk8u361
+  11.0.18
+
+Buggy levels: level 1
+level 0, 2, 3, 4 are fine.
+
+Bug type: diff
+
+Can also be reproduced by using c1 from the beginning, i.e., `-Xbatch
+-Xcomp -XX:TieredStopAtLevel=1` and #iterations in main loop can be
+reduced to 1.

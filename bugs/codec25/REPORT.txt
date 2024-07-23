@@ -1,0 +1,110 @@
+The most recent versions that are still able to reproduce the bug is
+11.0.19, 17.0.7, 18.0.2.1, 19.0.2, 20.0.1, Since 11.0.20, 17.0.8,
+20.0.2, this bug is fixed.
+
+Fixed on Jan 24, 2023
+https://github.com/openjdk/jdk/pull/12120
+
+Confirmed on October 24, 2022
+https://bugs.openjdk.org/browse/JDK-8297730
+https://bugs.java.com/bugdatabase/view_bug?bug_id=JDK-8297730
+
+# RESUBMITTED REPORT
+Submitted on January 27, 2023
+Internal review ID: 9074728
+Note: Exact copy of "Original Report" was submitted since no 
+confirmation email was sent.
+(Duplicate: https://bugs.openjdk.org/browse/JDK-8301660)
+
+# ORIGINAL REPORT
+Submitted on October 24, 2022
+Internal review ID: 9074230
+
+===============
+BELOW IS REPORT
+===============
+
+## Synopsis
+Incorrect Array Exception Thrown with c2
+
+## System / OS / Java Runtime Information 
+# Java version
+java 19.0.1 2022-10-18
+Java(TM) SE Runtime Environment (build 19.0.1+10-21)
+Java HotSpot(TM) 64-Bit Server VM (build 19.0.1+10-21, mixed mode, sharing)
+
+# Operating system details
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=18.04
+DISTRIB_CODENAME=bionic
+DISTRIB_DESCRIPTION="Ubuntu 18.04.5 LTS"
+NAME="Ubuntu"
+VERSION="18.04.5 LTS (Bionic Beaver)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 18.04.5 LTS"
+VERSION_ID="18.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=bionic
+UBUNTU_CODENAME=bionic
+
+$ uname -a
+Linux seoul 5.4.0-99-generic #112~18.04.1-Ubuntu SMP Thu Feb 3 14:09:57 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+
+## Description
+Different outputs of the attached program are observed between different compilation tiers. This bug
+affects java 11.0.17 2022-10-18, java 17 2021-09-14 LTS, Oracle JDK 18.0.2.1, Oracle JDK 19.0.1, and
+openjdk 20-ea 2023-03-21. It was not reproduced in java version "1.8.0_351".
+
+## Steps to Reproduce
+The following steps shows how to reproduce the bug on Java 19.0.1 in a Ubuntu Linux environment.
+
+# Compile
+$ javac C.java
+
+# Default or compilation up to level 4
+$ java C
+# Output (incorrect)
+99997
+
+# Compilation up to level 1
+$ java -XX:TieredStopAtLevel=1 C
+# Output (correct)
+100000
+
+# Interpreter or compilation up to level 0
+$ java -Xint C
+# Output (correct)
+100000
+
+## Source code for an executable test case
+# C.java
+public class C {
+    static byte[] m(byte[] arg1) {
+        byte[] b = new byte[-1];
+        System.arraycopy(arg1, 0, b, 0, arg1.length);
+        return b;
+    }
+
+    public static void main(String[] args) {
+        int count = 0;
+        for (int i = 0; i < 100_000; ++i) {
+            try {
+                System.out.println(m(null));
+            } catch (Throwable e) {
+                if (e instanceof java.lang.NegativeArraySizeException) {
+                    count++;
+                }
+            }
+        }
+        System.out.println(count); // Should be 100_000
+    }
+}
+
+## Workaround
+Interpreter or compilation for Level 0, 1, 2, 3 are fine.
+$ java -XX:TieredStopAtLevel=3 C

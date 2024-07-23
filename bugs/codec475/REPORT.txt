@@ -1,0 +1,119 @@
+The most recent versions that are still able to reproduce the bug is
+GraalVM Enterprise Edition 22.3.2, Oracle GraalVM 17.0.7. Since
+GraalVM Enterprise Edition 22.3.3, Oracle GraalVM 17.0.8 this bug is
+fixed. (Oracle changed naming from "GraalVM Enterprise Edition" to
+"Oracle GraalVM" in 2023 and also started matching versioning with
+associated JDK versions.)
+
+Fixed on Jul 19, 2023
+https://github.com/oracle/graal/pull/7017
+
+Confirmed on Apr 12, 2023
+
+Submitted on Apr 11, 2023
+https://github.com/oracle/graal/issues/6403
+
+===============
+BELOW IS REPORT
+===============
+
+### Describe the issue
+An incorrect result occurs when using Graal compilation for
+the program below, which includes String.getBytes(Charset)
+and primitive arithmetic. This issue affects both jdk17 and
+jdk20.
+
+### Steps to reproduce the issue
+The following steps shows how to reproduce the bug on
+GraalVM CE 23.1.0-dev-20230410_1959 openjdk20 in a Ubuntu
+Linux environment.
+
+**Compile**
+```
+$ javac C.java
+```
+
+**Execute**
+```
+$ java C
+155361584 // nondeterministic value, sometimes correct
+```
+
+```
+$ java -XX:-UseJVMCICompiler C
+0 // expected value
+```
+
+**Source code for an executable test case**
+```
+// C.java
+
+import java.nio.charset.StandardCharsets;
+
+public class C {
+
+    private static int m(String s) {
+        byte[] arr = s.getBytes(StandardCharsets.ISO_8859_1);
+        return arr[2]; // expected 0
+    }
+
+    /* 
+      * If the issue is not reproduced, the number of
+      * iterations of the loop in main() can be increased.
+      */
+    public static void main(String[] args) {
+        long sum = 0;
+        for (int i = 0; i < 10_000_000; ++i) {
+            sum += m("\u8020\000\000\020");
+        }
+        System.out.println(sum); // expected 0
+    }
+}
+```
+
+**Workaround**
+Disable Graal compiler as top tier JIT.
+```
+$ java -XX:-UseJVMCICompiler C
+```
+
+### Describe GraalVM and your environment
+ - GraalVM version: [**GraalVM CE 23.1.0-dev-20230410_1959**](https://github.com/graalvm/graalvm-ce-dev-builds/releases/tag/23.1.0-dev-20230410_1959)
+ - JDK major version: **20**
+ - OS: **Ubuntu 20.04.3 LTS**
+ - Architecture: **amd64**
+
+```
+$ java --version
+openjdk 20 2023-03-21
+OpenJDK Runtime Environment GraalVM CE 20-dev+34.1 (build 20+34-jvmci-23.0-b10)
+OpenJDK 64-Bit Server VM GraalVM CE 20-dev+34.1 (build 20+34-jvmci-23.0-b10, mixed mode, sharing)
+```
+
+### More details
+**Operating System Details**
+
+```
+$ cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.3 LTS"
+NAME="Ubuntu"
+VERSION="20.04.3 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.3 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+```
+
+```
+$ uname -a
+Linux luzhou 5.4.0-86-generic #97-Ubuntu SMP Fri Sep 17 19:19:40 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
+```

@@ -1,0 +1,11 @@
+Affected Java version: Oracle JDK 8u301, Oracle JDK 11.0.12, Oracle JDK 16.0.2, 17-ea+32-2679, 18-ea+7-288
+Not affected Java version: 
+
+Buggy levels: level 4
+level 0 - 3 are fine.
+
+Bug type: diff
+
+Can also be reproduced by using c2 from the beginning, i.e., `-Xbatch
+-Xcomp -XX:-TieredCompilation` and #iterations in main loop can be
+reduced to 2.
